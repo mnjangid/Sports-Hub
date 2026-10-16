@@ -10,6 +10,11 @@ const app = express();
 app.use(requestLogger);
 app.use(express.json());
 
+import routes from "./routes/index.js";
+app.use("/api", routes);
+
+
+
 app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
