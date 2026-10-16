@@ -12,17 +12,418 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id    Int    @id @default(autoincrement())
-  name  String?
-  posts Post[]
+// ---------- ENUMS ----------
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
 }
 
-model Post {
-  id       Int    @id @default(autoincrement())
-  title    String
-  authorId Int
-  author   User   @relation(fields: [authorId], references: [id])
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TournamentFormat {
+  LEAGUE
+  KNOCKOUT
+  GROUP_STAGE
+  LEAGUE_AND_KNOCKOUT
+  CUSTOM
+}
+
+enum TournamentStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+enum TeamRole {
+  MEMBER
+  CAPTAIN
+  VICE_CAPTAIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  POSTPONED
+  CANCELLED
+  ABANDONED
+}
+
+enum InningsStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DECLARED
+}
+
+enum ScoreEventType {
+  DELIVERY
+  PENALTY_RUNS
+}
+
+enum ExtraType {
+  WIDE
+  NO_BALL
+  BYE
+  LEG_BYE
+  PENALTY
+}
+
+enum DismissalType {
+  BOWLED
+  CAUGHT
+  LBW
+  RUN_OUT
+  STUMPED
+  HIT_WICKET
+  HIT_BALL_TWICE
+  OBSTRUCTING_FIELD
+  TIMED_OUT
+  RETIRED_OUT
+  OTHER
+}
+
+enum NoticeType {
+  GENERAL
+  TOURNAMENT
+  MATCH_SCHEDULE_CHANGE
+  MATCH_POSTPONED
+  MATCH_CANCELLED
+  RESULT
+  IMPORTANT
+}
+
+enum NoticeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ---------- UNIVERSITY & USERS ----------
+
+model University {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  logoUrl     String?
+  description String?
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+
+  users   User[]
+  sports  Sport[]
+  notices Notice[]
+
+  @@index([status])
+}
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  universityId    String     @db.Uuid
+  fullName        String
+  email           String
+  passwordHash    String
+  rollNumber      String?
+  department      String?
+  academicYear    String?
+  phoneNumber     String?
+  profilePhotoUrl String?
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @db.Timestamptz(3)
+
+  university University @relation(fields: [universityId], references: [id], onDelete: Restrict)
+
+  userRoles UserRole[]
+
+  coordinatorAssignments CoordinatorAssignment[] @relation("Coordinator")
+  assignmentsMade        CoordinatorAssignment[] @relation("AssignmentAssigner")
+
+  createdTournaments Tournament[] @relation("TournamentCreator")
+  teamMemberships   TeamMembership[]
+  noticesCreated    Notice[] @relation("NoticeAuthor")
+
+  battingEvents    ScoreEvent[] @relation("Striker")
+  nonStrikerEvents ScoreEvent[] @relation("NonStriker")
+  bowlingEvents    ScoreEvent[] @relation("Bowler")
+  dismissals       ScoreEvent[] @relation("DismissedPlayer")
+
+  scoreRevisions ScoreEventRevision[] @relation("RevisionEditor")
+
+  @@unique([universityId, email])
+  @@unique([universityId, rollNumber])
+  @@index([universityId, status])
+}
+
+model Role {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  userRoles UserRole[]
+}
+
+model UserRole {
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+// ---------- SPORTS & COORDINATORS ----------
+
+model Sport {
+  id           String       @id @default(uuid()) @db.Uuid
+  universityId String       @db.Uuid
+  name         String
+  description  String?
+  status       RecordStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
+
+  university University @relation(fields: [universityId], references: [id], onDelete: Restrict)
+
+  coordinatorAssignments CoordinatorAssignment[]
+  tournaments            Tournament[]
+
+  @@unique([universityId, name])
+  @@index([universityId, status])
+}
+
+model CoordinatorAssignment {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  sportId    String           @db.Uuid
+  assignedBy String           @db.Uuid
+  assignedAt DateTime         @default(now()) @db.Timestamptz(3)
+  status     AssignmentStatus @default(ACTIVE)
+
+  coordinator User @relation("Coordinator", fields: [userId], references: [id], onDelete: Restrict)
+  sport       Sport @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  assigner    User @relation("AssignmentAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([sportId, status])
+}
+
+// ---------- TOURNAMENTS & TEAMS ----------
+
+model Tournament {
+  id          String           @id @default(uuid()) @db.Uuid
+  sportId     String           @db.Uuid
+  name        String
+  description String?
+  format      TournamentFormat @default(CUSTOM)
+  startDate   DateTime?        @db.Timestamptz(3)
+  endDate     DateTime?        @db.Timestamptz(3)
+  status      TournamentStatus @default(DRAFT)
+  createdBy   String           @db.Uuid
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+
+  sport   Sport @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  creator User  @relation("TournamentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  teams   Team[]
+  matches Match[]
+  notices Notice[]
+
+  @@index([sportId, status])
+  @@index([startDate])
+}
+
+model Team {
+  id           String   @id @default(uuid()) @db.Uuid
+  tournamentId String   @db.Uuid
+  name         String
+  logoUrl      String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Restrict)
+
+  memberships TeamMembership[]
+
+  matchesAsTeamA Match[] @relation("MatchTeamA")
+  matchesAsTeamB Match[] @relation("MatchTeamB")
+  matchesWon     Match[] @relation("MatchWinner")
+
+  battingInnings Innings[] @relation("BattingTeam")
+  bowlingInnings Innings[] @relation("BowlingTeam")
+
+  @@unique([id, tournamentId])
+  @@unique([tournamentId, name])
+  @@index([tournamentId])
+}
+
+model TeamMembership {
+  id           String           @id @default(uuid()) @db.Uuid
+  teamId       String           @db.Uuid
+  tournamentId String           @db.Uuid
+  userId       String           @db.Uuid
+  teamRole     TeamRole         @default(MEMBER)
+  status       MembershipStatus @default(ACTIVE)
+  joinedAt     DateTime         @default(now()) @db.Timestamptz(3)
+  leftAt       DateTime?        @db.Timestamptz(3)
+
+  team Team @relation(fields: [teamId, tournamentId], references: [id, tournamentId], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([teamId, status])
+  @@index([tournamentId, userId, status])
+  @@index([userId])
+}
+
+// ---------- MATCHES ----------
+
+model Match {
+  id                String      @id @default(uuid()) @db.Uuid
+  tournamentId      String      @db.Uuid
+  teamAId           String      @db.Uuid
+  teamBId           String      @db.Uuid
+  venue             String?
+  scheduledAt       DateTime?   @db.Timestamptz(3)
+  status            MatchStatus @default(SCHEDULED)
+  winnerTeamId      String?     @db.Uuid
+  resultDescription String?
+  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime    @updatedAt @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Restrict)
+
+  teamA Team @relation("MatchTeamA", fields: [teamAId, tournamentId], references: [id, tournamentId], onDelete: Restrict)
+  teamB Team @relation("MatchTeamB", fields: [teamBId, tournamentId], references: [id, tournamentId], onDelete: Restrict)
+  winnerTeam Team? @relation("MatchWinner", fields: [winnerTeamId, tournamentId], references: [id, tournamentId], onDelete: Restrict)
+
+  innings Innings[]
+  notices Notice[]
+
+  @@index([tournamentId, status])
+  @@index([scheduledAt])
+}
+
+// ---------- CRICKET SCORING ----------
+
+model Innings {
+  id            String       @id @default(uuid()) @db.Uuid
+  matchId       String       @db.Uuid
+  inningsNumber Int
+  battingTeamId String       @db.Uuid
+  bowlingTeamId String       @db.Uuid
+  totalRuns     Int          @default(0)
+  wickets       Int          @default(0)
+  totalBalls    Int          @default(0)
+  status        InningsStatus @default(NOT_STARTED)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(3)
+
+  match       Match @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  battingTeam Team  @relation("BattingTeam", fields: [battingTeamId], references: [id], onDelete: Restrict)
+  bowlingTeam Team  @relation("BowlingTeam", fields: [bowlingTeamId], references: [id], onDelete: Restrict)
+
+  scoreEvents ScoreEvent[]
+
+  @@unique([matchId, inningsNumber])
+  @@index([battingTeamId])
+  @@index([bowlingTeamId])
+}
+
+model ScoreEvent {
+  id                String         @id @default(uuid()) @db.Uuid
+  inningsId         String         @db.Uuid
+  sequenceNumber    Int
+  strikerId         String         @db.Uuid
+  nonStrikerId      String         @db.Uuid
+  bowlerId          String         @db.Uuid
+  runsOffBat        Int            @default(0)
+  extras            Int            @default(0)
+  extraType         ExtraType?
+  eventType         ScoreEventType @default(DELIVERY)
+  isLegalDelivery   Boolean        @default(true)
+  dismissedPlayerId String?        @db.Uuid
+  dismissalType     DismissalType?
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @db.Timestamptz(3)
+
+  innings Innings @relation(fields: [inningsId], references: [id], onDelete: Restrict)
+
+  striker         User  @relation("Striker", fields: [strikerId], references: [id], onDelete: Restrict)
+  nonStriker      User  @relation("NonStriker", fields: [nonStrikerId], references: [id], onDelete: Restrict)
+  bowler          User  @relation("Bowler", fields: [bowlerId], references: [id], onDelete: Restrict)
+  dismissedPlayer User? @relation("DismissedPlayer", fields: [dismissedPlayerId], references: [id], onDelete: Restrict)
+
+  revisions ScoreEventRevision[]
+
+  @@unique([inningsId, sequenceNumber])
+  @@index([strikerId])
+  @@index([bowlerId])
+}
+
+model ScoreEventRevision {
+  id             String   @id @default(uuid()) @db.Uuid
+  scoreEventId   String   @db.Uuid
+  editedBy       String   @db.Uuid
+  previousValues Json
+  newValues      Json
+  reason         String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  scoreEvent ScoreEvent @relation(fields: [scoreEventId], references: [id], onDelete: Restrict)
+  editor     User       @relation("RevisionEditor", fields: [editedBy], references: [id], onDelete: Restrict)
+
+  @@index([scoreEventId, createdAt])
+  @@index([editedBy])
+}
+
+// ---------- NOTICES & ANNOUNCEMENTS ----------
+
+model Notice {
+  id           String       @id @default(uuid()) @db.Uuid
+  universityId String       @db.Uuid
+  createdBy    String       @db.Uuid
+  tournamentId String?      @db.Uuid
+  matchId      String?      @db.Uuid
+  title        String
+  message      String
+  type         NoticeType   @default(GENERAL)
+  status       NoticeStatus @default(DRAFT)
+  publishedAt  DateTime?    @db.Timestamptz(3)
+  expiresAt    DateTime?    @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
+
+  university University @relation(fields: [universityId], references: [id], onDelete: Restrict)
+  author     User       @relation("NoticeAuthor", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  tournament Tournament? @relation(fields: [tournamentId], references: [id], onDelete: Restrict)
+  match      Match?      @relation(fields: [matchId], references: [id], onDelete: Restrict)
+
+  @@index([universityId, status, publishedAt])
+  @@index([tournamentId])
+  @@index([matchId])
+  @@index([createdBy])
 }
 
 
