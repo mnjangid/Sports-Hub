@@ -1,6 +1,6 @@
 import { Router } from "express";
-import universityRoutes from "./university.routes.js";
-import sportRoutes from "./sport.routes.js";
+import universityRoutes from "./universityRoutes.js";
+import sportRoutes from "./sportRoutes.js";
 
 const router = Router();
 
