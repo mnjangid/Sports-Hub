@@ -3,19 +3,33 @@ import express from "express";
 import logger from "./utils/logger.js";
 import requestLogger from "./middlewares/requestLogger.js";
 import errorHandler from "./middlewares/errorHandler.js";
+import { prisma } from "./db/prisma.js";
 
 const app = express();
 
 app.use(requestLogger);
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
-  logger.info("Health endpoint accessed");
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
 
-  res.status(200).json({
-    success: true,
-    message: "SportsHub API is running",
-  });
+    logger.info("Health check successful: API and database are running");
+
+    res.status(200).json({
+      success: true,
+      message: "SportsHub API is running",
+      database: "connected",
+    });
+  } catch (error) {
+    logger.error("Health check failed: database unavailable", error);
+
+    res.status(503).json({
+      success: false,
+      message: "SportsHub API is running, but database is unavailable",
+      database: "disconnected",
+    });
+  }
 });
 
 app.use((req, res) => {
