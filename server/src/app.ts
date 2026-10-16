@@ -4,11 +4,13 @@ import logger from "./utils/logger.js";
 import requestLogger from "./middlewares/requestLogger.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import { prisma } from "./db/prisma.js";
+import tournamentRoutes from "./routes/tournamentRoutes.js";
 
 const app = express();
 
 app.use(requestLogger);
 app.use(express.json());
+app.use("/api/tournaments", tournamentRoutes);
 
 app.get("/api/health", async (_req, res) => {
   try {

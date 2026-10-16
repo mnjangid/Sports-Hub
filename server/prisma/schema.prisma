@@ -120,7 +120,7 @@ enum NoticeStatus {
 // ---------- UNIVERSITY & USERS ----------
 
 model University {
-  id          String       @id @default(uuid()) @db.Uuid
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   logoUrl     String?
   description String?
@@ -136,7 +136,7 @@ model University {
 }
 
 model User {
-  id              String     @id @default(uuid()) @db.Uuid
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   universityId    String     @db.Uuid
   fullName        String
   email           String
@@ -174,7 +174,7 @@ model User {
 }
 
 model Role {
-  id   String @id @default(uuid()) @db.Uuid
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name String @unique
 
   userRoles UserRole[]
@@ -195,7 +195,7 @@ model UserRole {
 // ---------- SPORTS & COORDINATORS ----------
 
 model Sport {
-  id           String       @id @default(uuid()) @db.Uuid
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   universityId String       @db.Uuid
   name         String
   description  String?
@@ -213,7 +213,7 @@ model Sport {
 }
 
 model CoordinatorAssignment {
-  id         String           @id @default(uuid()) @db.Uuid
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String           @db.Uuid
   sportId    String           @db.Uuid
   assignedBy String           @db.Uuid
@@ -231,7 +231,7 @@ model CoordinatorAssignment {
 // ---------- TOURNAMENTS & TEAMS ----------
 
 model Tournament {
-  id          String           @id @default(uuid()) @db.Uuid
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sportId     String           @db.Uuid
   name        String
   description String?
@@ -255,7 +255,7 @@ model Tournament {
 }
 
 model Team {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tournamentId String   @db.Uuid
   name         String
   logoUrl      String?
@@ -279,7 +279,7 @@ model Team {
 }
 
 model TeamMembership {
-  id           String           @id @default(uuid()) @db.Uuid
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   teamId       String           @db.Uuid
   tournamentId String           @db.Uuid
   userId       String           @db.Uuid
@@ -299,7 +299,7 @@ model TeamMembership {
 // ---------- MATCHES ----------
 
 model Match {
-  id                String      @id @default(uuid()) @db.Uuid
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tournamentId      String      @db.Uuid
   teamAId           String      @db.Uuid
   teamBId           String      @db.Uuid
@@ -351,7 +351,7 @@ model Innings {
 }
 
 model ScoreEvent {
-  id                String         @id @default(uuid()) @db.Uuid
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inningsId         String         @db.Uuid
   sequenceNumber    Int
   strikerId         String         @db.Uuid
@@ -382,7 +382,7 @@ model ScoreEvent {
 }
 
 model ScoreEventRevision {
-  id             String   @id @default(uuid()) @db.Uuid
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   scoreEventId   String   @db.Uuid
   editedBy       String   @db.Uuid
   previousValues Json
@@ -400,7 +400,7 @@ model ScoreEventRevision {
 // ---------- NOTICES & ANNOUNCEMENTS ----------
 
 model Notice {
-  id           String       @id @default(uuid()) @db.Uuid
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   universityId String       @db.Uuid
   createdBy    String       @db.Uuid
   tournamentId String?      @db.Uuid
