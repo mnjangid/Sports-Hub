@@ -78,12 +78,11 @@ export async function createTournamentController(
     if (
       typeof name !== "string" ||
       !name.trim() ||
-      typeof sportId !== "string" ||
-      typeof createdBy !== "string"
+      typeof sportId !== "string"
     ) {
       res.status(400).json({
         success: false,
-        message: "name, sportId, and createdBy are required",
+        message: "name and sportId are required",
       });
       return;
     }
@@ -91,7 +90,7 @@ export async function createTournamentController(
     const tournament = await createTournament({
       name: name.trim(),
       sportId,
-      createdBy,
+      createdBy: res.locals.authUser.userId,
       ...(typeof description === "string" && {
         description,
       }),
