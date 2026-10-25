@@ -10,6 +10,6 @@ const router = Router();
 
 router.get("/", getTournaments);
 router.get("/:id", getTournamentByIdController);
-router.post("/", authMiddleware, requireRole("COORDINATOR", "ADMIN"), requireSportAssignment, createTournamentController);
+router.post("/", authMiddleware, requireRole("ADMIN"), requireSportAssignment, createTournamentController);
 
 export default router;
