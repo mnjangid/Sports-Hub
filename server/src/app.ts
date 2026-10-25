@@ -10,6 +10,8 @@ import authRoutes from "./routes/authRoutes.js";
 import { authMiddleware } from "./middlewares/authMiddleware.js";
 import { requireRole } from "./middlewares/roleMiddleware.js";
 import coordinatorAssignmentRoutes from "./routes/coordinatorAssignmentRoutes.js";
+import teamRoutes from "./routes/teamRoutes.js";
+import teamMembershipRoutes from "./routes/teamMembershipRoutes.js";
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/universities", universityRoutes);
 app.use("/api/sports", sportRoutes);
 app.use("/api/coordinator-assignments", coordinatorAssignmentRoutes);
+app.use("/api/teams", teamRoutes);
+app.use("/api/team-memberships", teamMembershipRoutes);
 
 app.get("/api/health", async (_req, res) => {
   try {
