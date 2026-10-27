@@ -18,34 +18,41 @@ export async function requireSportAssignment(
       return;
     }
 
-    const sportId = req.body?.sportId;
+    const tournamentId = req.body?.tournamentId;
 
-    if (typeof sportId !== "string" || !sportId.trim()) {
+    if (
+      typeof tournamentId !== "string" ||
+      !tournamentId.trim()
+    ) {
       res.status(400).json({
         success: false,
-        message: "A valid sportId is required.",
+        message: "A valid tournamentId is required.",
       });
       return;
     }
 
-    // First, verify that this sport belongs to the user's university.
-    const sport = await prisma.sport.findFirst({
+    // Resolve the tournament's sport and verify university ownership.
+    const tournament = await prisma.tournament.findFirst({
       where: {
-        id: sportId,
-        universityId: authUser.universityId,
+        id: tournamentId,
+        sport: {
+          universityId: authUser.universityId,
+        },
       },
-      select: { id: true },
+      select: {
+        sportId: true,
+      },
     });
 
-    if (!sport) {
+    if (!tournament) {
       res.status(404).json({
         success: false,
-        message: "Sport not found in your university.",
+        message: "Tournament not found in your university.",
       });
       return;
     }
 
-    // University admins can manage all sports within their own university.
+    // Admins can manage all sports in their own university.
     const isAdmin = await prisma.userRole.findFirst({
       where: {
         userId: authUser.userId,
@@ -63,8 +70,11 @@ export async function requireSportAssignment(
     const assignment = await prisma.coordinatorAssignment.findFirst({
       where: {
         userId: authUser.userId,
-        sportId,
+        sportId: tournament.sportId,
         status: "ACTIVE",
+        sport: {
+          universityId: authUser.universityId,
+        },
       },
       select: { id: true },
     });
