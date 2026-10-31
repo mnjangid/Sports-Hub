@@ -149,3 +149,101 @@ export function requireTournamentSportAccess(
     }
   };
 }
+
+
+
+export async function requireTeamSportAccess(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const authUser = res.locals.authUser;
+    const { teamId } = req.body;
+
+    if (!authUser?.userId || !authUser?.universityId) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    if (typeof teamId !== "string" || !teamId.trim()) {
+      res.status(400).json({
+        success: false,
+        message: "A valid teamId is required.",
+      });
+      return;
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: {
+        tournament: {
+          select: {
+            sportId: true,
+            sport: {
+              select: {
+                universityId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({
+        success: false,
+        message: "Team not found.",
+      });
+      return;
+    }
+
+    const { sportId, sport } = team.tournament;
+
+    if (sport.universityId !== authUser.universityId) {
+      res.status(403).json({
+        success: false,
+        message: "This team belongs to another university.",
+      });
+      return;
+    }
+
+    const admin = await prisma.userRole.findFirst({
+      where: {
+        userId: authUser.userId,
+        role: { name: "ADMIN" },
+      },
+      select: { userId: true },
+    });
+
+    if (admin) {
+      next();
+      return;
+    }
+
+    const assignment = await prisma.coordinatorAssignment.findFirst({
+      where: {
+        userId: authUser.userId,
+        sportId,
+        status: "ACTIVE",
+        sport: { universityId: authUser.universityId },
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      res.status(403).json({
+        success: false,
+        message: "You are not authorized to manage this sport.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
