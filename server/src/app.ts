@@ -12,6 +12,8 @@ import { requireRole } from "./middlewares/roleMiddleware.js";
 import coordinatorAssignmentRoutes from "./routes/coordinatorAssignmentRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
 import teamMembershipRoutes from "./routes/teamMembershipRoutes.js";
+import matchRoutes from "./routes/matchRoutes.js";
+import inningsRoutes from "./routes/inningsRoutes.js";
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.use("/api/sports", sportRoutes);
 app.use("/api/coordinator-assignments", coordinatorAssignmentRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/team-memberships", teamMembershipRoutes);
+app.use("/api/matches", matchRoutes);
+app.use("/api/innings", inningsRoutes);
 
 app.get("/api/health", async (_req, res) => {
   try {

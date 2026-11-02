@@ -1,22 +1,17 @@
-
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../db/prisma.js";
 
-type ResourceType = "team" | "membership";
+type ResourceType = "team" | "membership" | "match" | "innings";
 
 type AuthorizationOptions = {
   resource: ResourceType;
   paramName?: string;
+  source?: "params" | "body";
+  fieldName?: string;
 };
 
-export function requireTournamentSportAccess(
-  options: AuthorizationOptions,
-) {
-  return async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
+export function requireTournamentSportAccess(options: AuthorizationOptions) {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authUser = res.locals.authUser;
 
@@ -28,9 +23,13 @@ export function requireTournamentSportAccess(
         return;
       }
 
-      const paramValue = req.params[options.paramName ?? "id"];
-      const id = Array.isArray(paramValue) ? paramValue[0] : paramValue;
+      const source = options.source ?? "params";
+      const fieldName = options.fieldName ?? options.paramName ?? "id";
 
+      const rawId =
+        source === "body" ? req.body?.[fieldName] : req.params[fieldName];
+
+      const id = Array.isArray(rawId) ? rawId[0] : rawId;
       if (typeof id !== "string" || !id.trim()) {
         res.status(400).json({
           success: false,
@@ -68,7 +67,7 @@ export function requireTournamentSportAccess(
 
         sportId = team.tournament.sportId;
         universityId = team.tournament.sport.universityId;
-      } else {
+      } else if (options.resource === "membership") {
         const membership = await prisma.teamMembership.findUnique({
           where: { id },
           select: {
@@ -97,6 +96,119 @@ export function requireTournamentSportAccess(
 
         sportId = membership.team.tournament.sportId;
         universityId = membership.team.tournament.sport.universityId;
+      } else if (options.resource === "match") {
+        // New match logic
+        if (source === "body" && fieldName === "tournamentId") {
+          const tournament = await prisma.tournament.findUnique({
+            where: { id },
+            select: {
+              sportId: true,
+              sport: {
+                select: { universityId: true },
+              },
+            },
+          });
+
+          if (!tournament) {
+            res.status(404).json({
+              success: false,
+              message: "Tournament not found.",
+            });
+            return;
+          }
+
+          sportId = tournament.sportId;
+          universityId = tournament.sport.universityId;
+        } else {
+          const match = await prisma.match.findUnique({
+            where: { id },
+            select: {
+              tournament: {
+                select: {
+                  sportId: true,
+                  sport: {
+                    select: { universityId: true },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!match) {
+            res.status(404).json({
+              success: false,
+              message: "Match not found.",
+            });
+            return;
+          }
+
+          sportId = match.tournament.sportId;
+          universityId = match.tournament.sport.universityId;
+        }
+      } else if (options.resource === "innings") {
+        // New innings logic
+        if (source === "body" && fieldName === "matchId") {
+          const match = await prisma.match.findUnique({
+            where: { id },
+            select: {
+              tournament: {
+                select: {
+                  sportId: true,
+                  sport: {
+                    select: { universityId: true },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!match) {
+            res.status(404).json({
+              success: false,
+              message: "Match not found.",
+            });
+            return;
+          }
+
+          sportId = match.tournament.sportId;
+          universityId = match.tournament.sport.universityId;
+        } else {
+          const innings = await prisma.innings.findUnique({
+            where: { id },
+            select: {
+              match: {
+                select: {
+                  tournament: {
+                    select: {
+                      sportId: true,
+                      sport: {
+                        select: { universityId: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!innings) {
+            res.status(404).json({
+              success: false,
+              message: "Innings not found.",
+            });
+            return;
+          }
+
+          sportId = innings.match.tournament.sportId;
+          universityId = innings.match.tournament.sport.universityId;
+        }
+      }
+      else {
+        res.status(400).json({
+          success: false,
+          message: "Invalid resource type.",
+        });
+        return;
       }
 
       // A resource from another university must never be manageable.
@@ -149,8 +261,6 @@ export function requireTournamentSportAccess(
     }
   };
 }
-
-
 
 export async function requireTeamSportAccess(
   req: Request,

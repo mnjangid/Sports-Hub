@@ -172,6 +172,7 @@ export async function createTeam(
       logoUrl,
     });
 
+    
     res.status(201).json({ success: true, data: team });
   } catch (err) {
     next(err);
