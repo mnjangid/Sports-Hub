@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "ScoreEvent" ALTER COLUMN "strikerId" DROP NOT NULL,
+ALTER COLUMN "nonStrikerId" DROP NOT NULL,
+ALTER COLUMN "bowlerId" DROP NOT NULL;

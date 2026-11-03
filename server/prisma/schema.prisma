@@ -353,9 +353,9 @@ model ScoreEvent {
   id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inningsId         String         @db.Uuid
   sequenceNumber    Int
-  strikerId         String         @db.Uuid
-  nonStrikerId      String         @db.Uuid
-  bowlerId          String         @db.Uuid
+  strikerId         String?        @db.Uuid
+  nonStrikerId      String?        @db.Uuid
+  bowlerId          String?        @db.Uuid
   runsOffBat        Int            @default(0)
   extras            Int            @default(0)
   extraType         ExtraType?
@@ -365,12 +365,14 @@ model ScoreEvent {
   dismissalType     DismissalType?
   createdAt         DateTime       @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime       @updatedAt @db.Timestamptz(3)
+  completedRuns Int @default(0)
+  battersCrossed Boolean @default(false)
 
   innings Innings @relation(fields: [inningsId], references: [id], onDelete: Restrict)
 
-  striker         User  @relation("Striker", fields: [strikerId], references: [id], onDelete: Restrict)
-  nonStriker      User  @relation("NonStriker", fields: [nonStrikerId], references: [id], onDelete: Restrict)
-  bowler          User  @relation("Bowler", fields: [bowlerId], references: [id], onDelete: Restrict)
+  striker         User?  @relation("Striker", fields: [strikerId], references: [id], onDelete: Restrict)
+  nonStriker      User?  @relation("NonStriker", fields: [nonStrikerId], references: [id], onDelete: Restrict)
+  bowler          User? @relation("Bowler", fields: [bowlerId], references: [id], onDelete: Restrict)
   dismissedPlayer User? @relation("DismissedPlayer", fields: [dismissedPlayerId], references: [id], onDelete: Restrict)
 
   revisions ScoreEventRevision[]

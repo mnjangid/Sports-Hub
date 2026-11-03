@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../db/prisma.js";
+import type { ScoreEvent } from "../../generated/prisma/browser.js";
 
-type ResourceType = "team" | "membership" | "match" | "innings";
+type ResourceType = "team" | "membership" | "match" | "innings" | "scoreEvent";
 
 type AuthorizationOptions = {
   resource: ResourceType;
@@ -202,8 +203,42 @@ export function requireTournamentSportAccess(options: AuthorizationOptions) {
           sportId = innings.match.tournament.sportId;
           universityId = innings.match.tournament.sport.universityId;
         }
-      }
-      else {
+      } else if (options.resource === "scoreEvent") {
+        const scoreEvent = await prisma.scoreEvent.findUnique({
+          where: { id },
+          select: {
+            innings: {
+              select: {
+                match: {
+                  select: {
+                    tournament: {
+                      select: {
+                        sportId: true,
+                        sport: {
+                          select: {
+                            universityId: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!scoreEvent) {
+          res.status(404).json({
+            success: false,
+            message: "Score event not found.",
+          });
+          return;
+        }
+
+        sportId = scoreEvent.innings.match.tournament.sportId;
+        universityId = scoreEvent.innings.match.tournament.sport.universityId;
+      } else {
         res.status(400).json({
           success: false,
           message: "Invalid resource type.",

@@ -14,6 +14,7 @@ import teamRoutes from "./routes/teamRoutes.js";
 import teamMembershipRoutes from "./routes/teamMembershipRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import inningsRoutes from "./routes/inningsRoutes.js";
+import scoreEventRoutes from "./routes/scoreEventRoutes.js";
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/team-memberships", teamMembershipRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/innings", inningsRoutes);
+app.use("/api/score-events", scoreEventRoutes);
 
 app.get("/api/health", async (_req, res) => {
   try {
